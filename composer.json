@@ -1,0 +1,19 @@
+{
+    "name": "david-cole/react-laravel",
+    "description": "ReactPHP WebServer for use with the Laravel 5.2 framework.",
+    "authors": [
+        {
+            "name": "David",
+            "email": "david@team-reflex.com"
+        }
+    ],
+    "require": {
+        "react/http": "dev-master",
+        "hoa/mime": "3.16.01.15",
+        "hoa/file": "1.16.01.15",
+        "monolog/monolog": "^1.17"
+    },
+    "require-dev": {
+        "symfony/var-dumper": "^3.0"
+    }
+}

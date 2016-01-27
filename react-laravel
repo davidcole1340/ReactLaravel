@@ -1,0 +1,114 @@
+#!/usr/bin/env php
+<?php
+
+include 'vendor/autoload.php';
+
+@list(, $dir, $port, $hostname) = $_SERVER['argv'];
+
+if (is_null($dir)) {
+	echo 'The <dir> field is required.'.PHP_EOL;
+	echo 'Usage: `./react-laravel <laravel-dir> [port] [hostname]'.PHP_EOL;
+	die(1);
+}
+
+require $dir.'/bootstrap/autoload.php';
+
+$port = (is_null($port)) ? 8080 : $port;
+$hostname = (is_null($hostname)) ? '127.0.0.1' : $hostname;
+
+$log = new \Monolog\Logger('react-laravel');
+$log->pushHandler(new \Monolog\Handler\StreamHandler('php://stdout', \Monolog\Logger::DEBUG));
+
+$loop = \React\EventLoop\Factory::create();
+$socket = new \React\Socket\Server($loop);
+$http = new \React\Http\Server($socket);
+
+// Init Laravel
+$app = require_once $dir.'/bootstrap/app.php';
+$kernel = $app->make('Illuminate\Contracts\Http\Kernel');
+
+$http->on('request', function ($request, $response) use ($kernel, $dir, $log) {
+	$st = microtime(true);
+	$ua = $request->getHeaders()['User-Agent'];
+	$log->addInfo("{$request->getMethod()} {$request->getPath()} - {$ua}");
+
+	if (file_exists($dir.'/public/'.$request->getPath()) && false === array_search($request->getPath(), ['/', '/index.php'])) {
+		$rHeaders = [];
+		
+		try {
+			$type = new \Hoa\Mime\Mime(new \Hoa\File\Read($dir.'/public/'.$request->getPath()));
+			$rHeaders['Content-Type'] = $type->getMime();
+		} catch (\Hoa\Mime\Exception\MimeIsNotFound $e) {} // Do nothing, we will just send with no Content-Type
+
+		$response->writeHead(200, $rHeaders);
+		$response->end(file_get_contents($dir.'/public/'.$request->getPath()));
+		return;
+	}
+
+	$headers = $request->getHeaders();
+	$body = $request->getPost();
+	$cookies = [];
+	$files = [];
+
+	if (isset($headers['Cookie'])) {
+		$hCookies = explode(';', $headers['Cookie']);
+
+		foreach ($hCookies as $cookie) {
+			$cookie = explode('=', trim($cookie));
+
+			if (!isset($cookie[1])) {
+				$cookies[] = $cookie;
+				continue;
+			}
+
+			list($name, $value) = $cookie;
+			$cookies[$name] = $value;
+		}
+	}
+
+	$lRequest = new \Illuminate\Http\Request(
+		$request->getQuery(), // GET Parameters
+		$body, // POST Parameters
+		[], // Request Attributes
+		$cookies, // Cookies
+		$files, // Files
+		[], // Server Parameters
+		$request->getBody() // Raw Request body
+	);
+	$lRequest->setMethod($request->getMethod());
+	$lRequest->headers->replace($headers);
+	$lRequest->server->set('REQUEST_URI', $request->getPath());
+	$lRequest->server->set('SERVER_NAME', explode(':', $headers['Host'])[0]);
+
+	$lResponse = $kernel->handle(
+		$lRequest
+	);
+
+	$resHeaders = [];
+
+	foreach ($lResponse->headers->allPreserveCase() as $key => $values) {
+		$resHeaders[$key] = $values[0];
+	}
+
+	foreach ($lResponse->headers->getCookies() as $cookie) {
+		$resHeaders['Set-Cookie'][] = (string) $cookie;
+	}
+
+	if (!isset($resHeaders['Date'])) {
+		$date = \DateTime::createFromFormat('U', time());
+		$date->setTimezone(new \DateTimeZone('UTC'));
+		$resHeaders['Date'] = $date->format('D, d M Y H:i:s').' GMT';
+	}
+
+	$response->writeHead($lResponse->getStatusCode(), $resHeaders);
+	$response->end($lResponse->getContent());
+
+	$kernel->terminate($lRequest, $lResponse);
+
+	$et = microtime(true);
+	$diff = $et - $st;
+	$log->addDebug("{$request->getMethod()} {$request->getPath()}: Completed in {$diff} second(s).");
+});
+
+$socket->listen($port, $hostname);
+$loop->run();
