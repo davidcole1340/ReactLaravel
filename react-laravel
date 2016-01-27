@@ -8,8 +8,8 @@ if (file_exists(__DIR__.'/vendor/autoload.php')) {
 	include __DIR__.'/vendor/autoload.php';
 }
 // If we have installed this globally this should work!
-elseif (file_exists(__DIR__.'/../autoload.php')) {
-	include __DIR__.'/../autoload.php';
+elseif (file_exists(getenv('HOME').'/.composer/vendor/autoload.php')) {
+	include getenv('HOME').'/.composer/vendor/autoload.php';
 }
 // User *MOST* likely hasn't run `composer install`
 else {
