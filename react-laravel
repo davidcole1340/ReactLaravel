@@ -29,7 +29,7 @@ $kernel = $app->make('Illuminate\Contracts\Http\Kernel');
 
 $http->on('request', function ($request, $response) use ($kernel, $dir, $log) {
 	$st = microtime(true);
-	$ua = $request->getHeaders()['User-Agent'];
+	$ua = isset($request->getHeaders()['User-Agent']) ? $request->getHeaders()['User-Agent'] : 'Unknown User-Agent';
 	$log->addInfo("{$request->getMethod()} {$request->getPath()} - {$ua}");
 
 	$headers = $request->getHeaders();
