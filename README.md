@@ -11,7 +11,7 @@ You can either clone the repository or install it globally via Composer:
 ```bash
 composer global require david-cole/react-laravel
 # Make sure ~/.composer/vendor/bin is in your PATH
-react-laravel <path-to-laravel> [port=8080] [ip=127.0.0.1]
+react-laravel <path-to-laravel> [port=8080] [ip=127.0.0.1] [loglevel=info]
 ```
 
 #### Cloning the Repository
@@ -20,5 +20,5 @@ react-laravel <path-to-laravel> [port=8080] [ip=127.0.0.1]
 git clone https://github.com/uniquoooo/ReactLaravel.git
 cd ReactLaravel
 composer install
-./react-laravel <path-to-laravel> [port=8080] [ip=127.0.0.1]
+./react-laravel <path-to-laravel> [port=8080] [ip=127.0.0.1] [loglevel=info]
 ```

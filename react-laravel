@@ -30,7 +30,7 @@ EOF;
 	die(1);
 }
 
-@list(, $dir, $port, $hostname) = $_SERVER['argv'];
+@list(, $dir, $port, $hostname, $loglevel) = $_SERVER['argv'];
 
 if (is_null($dir)) {
 	echo 'The <dir> field is required.'.PHP_EOL;
@@ -42,9 +42,18 @@ require $dir.'/bootstrap/autoload.php';
 
 $port = (is_null($port)) ? 8080 : $port;
 $hostname = (is_null($hostname)) ? '127.0.0.1' : $hostname;
+$loglevel = (is_null($loglevel)) ? 'INFO' : strtoupper($loglevel);
+
+$levels = \Monolog\Logger::getLevels();
+
+if (!isset($levels[$loglevel])) {
+	$loglevel = \Monolog\Logger::INFO;
+} else {
+	$loglevel = $levels[$loglevel];
+}
 
 $log = new \Monolog\Logger('react-laravel');
-$log->pushHandler(new \Monolog\Handler\StreamHandler('php://stdout', \Monolog\Logger::INFO));
+$log->pushHandler(new \Monolog\Handler\StreamHandler('php://stdout', $loglevel));
 
 $loop = \React\EventLoop\Factory::create();
 $socket = new \React\Socket\Server($loop);
