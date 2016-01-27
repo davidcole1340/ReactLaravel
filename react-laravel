@@ -1,7 +1,34 @@
 #!/usr/bin/env php
 <?php
 
-include 'vendor/autoload.php';
+// Composer Autoload
+
+// If we have cloned the repository this should work!
+if (file_exists(__DIR__.'/vendor/autoload.php')) {
+	include __DIR__.'/vendor/autoload.php';
+}
+// If we have installed this globally this should work!
+elseif (file_exists(__DIR__.'/../autoload.php')) {
+	include __DIR__.'/../autoload.php';
+}
+// User *MOST* likely hasn't run `composer install`
+else {
+	$str = <<<'EOF'
+Oops! We can't find the Composer autoload file!
+
+If you have cloned the repository make sure you
+run `composer install` before trying to run this
+program.
+
+If you are still having issues ask for help with
+GitHub issues on the repository.
+
+If you would like to contact me directly feel free
+to email me on david@team-reflex.com.
+EOF;
+	echo $str.PHP_EOL;
+	die(1);
+}
 
 @list(, $dir, $port, $hostname) = $_SERVER['argv'];
 
