@@ -32,7 +32,24 @@ $http->on('request', function ($request, $response) use ($kernel, $dir, $log) {
 	$ua = $request->getHeaders()['User-Agent'];
 	$log->addInfo("{$request->getMethod()} {$request->getPath()} - {$ua}");
 
+	$headers = $request->getHeaders();
+
 	if (file_exists($dir.'/public/'.$request->getPath()) && false === array_search($request->getPath(), ['/', '/index.php'])) {
+		if (isset($headers['If-None-Match'])) {
+			$etag = $request->getPath().$request->getRemoteAddress();
+			$etag = md5($etag);
+			$etag = "\"{$etag}\"";
+
+			if ($headers['If-None-Match'] == $etag) {
+				$date = \DateTime::createFromFormat('U', filemtime($dir.'/public/'.$request->getPath()));
+				$date->setTimezone(new \DateTimeZone('UTC'));
+
+				$response->writeHead(304, ['ETag' => $etag, 'Last-Modified' => $date->format('D, d M Y H:i:s').' GMT']);
+				$response->end();
+				return;
+			}
+		}
+
 		$rHeaders = [];
 		
 		try {
@@ -40,12 +57,16 @@ $http->on('request', function ($request, $response) use ($kernel, $dir, $log) {
 			$rHeaders['Content-Type'] = $type->getMime();
 		} catch (\Hoa\Mime\Exception\MimeIsNotFound $e) {} // Do nothing, we will just send with no Content-Type
 
+		$etag = $request->getPath().$request->getRemoteAddress();
+		$etag = md5($etag);
+
+		$rHeaders['ETag'] = "\"{$etag}\"";
+
 		$response->writeHead(200, $rHeaders);
 		$response->end(file_get_contents($dir.'/public/'.$request->getPath()));
 		return;
 	}
 
-	$headers = $request->getHeaders();
 	$body = $request->getPost();
 	$cookies = [];
 	$files = [];
