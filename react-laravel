@@ -44,7 +44,7 @@ $port = (is_null($port)) ? 8080 : $port;
 $hostname = (is_null($hostname)) ? '127.0.0.1' : $hostname;
 
 $log = new \Monolog\Logger('react-laravel');
-$log->pushHandler(new \Monolog\Handler\StreamHandler('php://stdout', \Monolog\Logger::DEBUG));
+$log->pushHandler(new \Monolog\Handler\StreamHandler('php://stdout', \Monolog\Logger::INFO));
 
 $loop = \React\EventLoop\Factory::create();
 $socket = new \React\Socket\Server($loop);
@@ -166,4 +166,5 @@ $http->on('request', function ($request, $response) use ($kernel, $dir, $log) {
 });
 
 $socket->listen($port, $hostname);
+$log->addInfo("Server will listen on {$hostname}:{$port}");
 $loop->run();
