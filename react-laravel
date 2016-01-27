@@ -35,18 +35,24 @@ $http->on('request', function ($request, $response) use ($kernel, $dir, $log) {
 	$headers = $request->getHeaders();
 
 	if (file_exists($dir.'/public/'.$request->getPath()) && false === array_search($request->getPath(), ['/', '/index.php'])) {
+		$date = \DateTime::createFromFormat('U', filemtime($dir.'/public/'.$request->getPath()));
+		$date->setTimezone(new \DateTimeZone('UTC'));
+
 		if (isset($headers['If-None-Match'])) {
 			$etag = $request->getPath().$request->getRemoteAddress();
 			$etag = md5($etag);
 			$etag = "\"{$etag}\"";
 
-			if ($headers['If-None-Match'] == $etag) {
-				$date = \DateTime::createFromFormat('U', filemtime($dir.'/public/'.$request->getPath()));
-				$date->setTimezone(new \DateTimeZone('UTC'));
-
-				$response->writeHead(304, ['ETag' => $etag, 'Last-Modified' => $date->format('D, d M Y H:i:s').' GMT']);
-				$response->end();
-				return;
+			if (isset($headers['If-Modified-Since'])) {
+				$modified = \DateTime::createFromFormat('D, d M Y H:i:s T', $headers['If-Modified-Since']);
+				
+				if (!($date->format('U') > $modified->format('U'))) {
+					if ($headers['If-None-Match'] == $etag) {
+						$response->writeHead(304, ['ETag' => $etag, 'Last-Modified' => $date->format('D, d M Y H:i:s').' GMT']);
+						$response->end();
+						return;
+					}
+				}
 			}
 		}
 
@@ -61,6 +67,7 @@ $http->on('request', function ($request, $response) use ($kernel, $dir, $log) {
 		$etag = md5($etag);
 
 		$rHeaders['ETag'] = "\"{$etag}\"";
+		$rHeaders['Last-Modified'] = $date->format('D, d M Y H:i:s').' GMT';
 
 		$response->writeHead(200, $rHeaders);
 		$response->end(file_get_contents($dir.'/public/'.$request->getPath()));
